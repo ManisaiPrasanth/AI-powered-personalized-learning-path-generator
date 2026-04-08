@@ -253,6 +253,36 @@ courseRouter.get('/:slug/chat', async (req, res) => {
       .json({ message: 'You need progress in this course before joining the discussion.' });
   }
 
+  const participants = await all<{ id: number; name: string; email: string }>(
+    `SELECT DISTINCT u.id, u.name, u.email
+     FROM UserProgress up
+     JOIN Users u ON u.id = up.user_id
+     WHERE up.course_id = ?
+     ORDER BY u.name ASC`,
+    [course.id]
+  );
+
+  const sentRequests = await all<{ to_user_id: number; status: string }>(
+    `SELECT to_user_id, status
+     FROM CourseCollabRequests
+     WHERE course_id = ? AND from_user_id = ?`,
+    [course.id, userId]
+  );
+  const sentRequestStatusByUserId = Object.fromEntries(
+    sentRequests.map((r) => [String(r.to_user_id), r.status])
+  );
+  const acceptedCollaborators = await all<{ user_id: number; name: string; email: string }>(
+    `SELECT u.id as user_id, u.name, u.email
+     FROM CourseCollabRequests r
+     JOIN Users u ON u.id =
+       CASE WHEN r.from_user_id = ? THEN r.to_user_id ELSE r.from_user_id END
+     WHERE r.course_id = ?
+       AND r.status = 'accepted'
+       AND (r.from_user_id = ? OR r.to_user_id = ?)
+     ORDER BY u.name ASC`,
+    [userId, course.id, userId, userId]
+  );
+
   const messages = await all<{
     id: number;
     user_id: number;
@@ -271,6 +301,18 @@ courseRouter.get('/:slug/chat', async (req, res) => {
 
   return res.json({
     course: { id: course.id, title: course.title, slug },
+    participants: participants.map((p) => ({
+      id: p.id,
+      name: p.name,
+      email: p.email,
+      isMe: p.id === userId
+    })),
+    acceptedCollaborators: acceptedCollaborators.map((c) => ({
+      id: c.user_id,
+      name: c.name,
+      email: c.email
+    })),
+    sentRequestStatusByUserId,
     messages: messages.map((m) => ({
       id: m.id,
       userId: m.user_id,
@@ -281,6 +323,201 @@ courseRouter.get('/:slug/chat', async (req, res) => {
     }))
   });
 });
+
+courseRouter.post(
+  '/:slug/collab-requests',
+  [body('toUserId').isInt({ gt: 0 })],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const fromUserId = req.user!.userId;
+    const { slug } = req.params;
+    const { toUserId } = req.body as { toUserId: number };
+
+    if (fromUserId === toUserId) {
+      return res.status(400).json({ message: 'You cannot send a request to yourself.' });
+    }
+
+    const course = await get<{ id: number }>('SELECT id FROM Courses WHERE slug = ?', [slug]);
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found.' });
+    }
+
+    const senderProgress = await get<{ count: number }>(
+      'SELECT COUNT(*) as count FROM UserProgress WHERE user_id = ? AND course_id = ?',
+      [fromUserId, course.id]
+    );
+    const receiverProgress = await get<{ count: number }>(
+      'SELECT COUNT(*) as count FROM UserProgress WHERE user_id = ? AND course_id = ?',
+      [toUserId, course.id]
+    );
+    if (!senderProgress?.count || !receiverProgress?.count) {
+      return res
+        .status(403)
+        .json({ message: 'Both users must have course progress to collaborate.' });
+    }
+
+    const existing = await get<{ id: number; status: string }>(
+      `SELECT id, status
+       FROM CourseCollabRequests
+       WHERE course_id = ? AND from_user_id = ? AND to_user_id = ?`,
+      [course.id, fromUserId, toUserId]
+    );
+
+    if (!existing) {
+      await run(
+        `INSERT INTO CourseCollabRequests (course_id, from_user_id, to_user_id, status)
+         VALUES (?, ?, ?, 'pending')`,
+        [course.id, fromUserId, toUserId]
+      );
+    } else {
+      await run(
+        `UPDATE CourseCollabRequests
+         SET status = 'pending', created_at = CURRENT_TIMESTAMP, responded_at = NULL
+         WHERE id = ?`,
+        [existing.id]
+      );
+    }
+
+    return res.status(201).json({ message: 'Collaboration request sent.', status: 'pending' });
+  }
+);
+
+courseRouter.get('/:slug/private-chat/:otherUserId', async (req, res) => {
+  const userId = req.user!.userId;
+  const { slug, otherUserId } = req.params;
+  const peerId = Number(otherUserId);
+
+  const course = await get<{ id: number }>('SELECT id FROM Courses WHERE slug = ?', [slug]);
+  if (!course) {
+    return res.status(404).json({ message: 'Course not found.' });
+  }
+  if (!peerId || peerId === userId) {
+    return res.status(400).json({ message: 'Invalid collaborator.' });
+  }
+
+  const accepted = await get<{ id: number }>(
+    `SELECT id
+     FROM CourseCollabRequests
+     WHERE course_id = ?
+       AND status = 'accepted'
+       AND (
+         (from_user_id = ? AND to_user_id = ?)
+         OR
+         (from_user_id = ? AND to_user_id = ?)
+       )`,
+    [course.id, userId, peerId, peerId, userId]
+  );
+  if (!accepted) {
+    return res.status(403).json({ message: 'Private chat is available after request acceptance.' });
+  }
+
+  const messages = await all<{
+    id: number;
+    from_user_id: number;
+    to_user_id: number;
+    content: string;
+    created_at: string;
+    from_name: string;
+  }>(
+    `SELECT m.id, m.from_user_id, m.to_user_id, m.content, m.created_at, u.name as from_name
+     FROM CourseCollabMessages m
+     JOIN Users u ON u.id = m.from_user_id
+     WHERE m.course_id = ?
+       AND (
+         (m.from_user_id = ? AND m.to_user_id = ?)
+         OR
+         (m.from_user_id = ? AND m.to_user_id = ?)
+       )
+     ORDER BY m.created_at ASC, m.id ASC
+     LIMIT 300`,
+    [course.id, userId, peerId, peerId, userId]
+  );
+
+  return res.json({
+    messages: messages.map((m) => ({
+      id: m.id,
+      userId: m.from_user_id,
+      userName: m.from_name,
+      content: m.content,
+      createdAt: m.created_at,
+      isMe: m.from_user_id === userId
+    }))
+  });
+});
+
+courseRouter.post(
+  '/:slug/private-chat/:otherUserId',
+  [body('content').isString().isLength({ min: 1, max: 2000 }).trim()],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const userId = req.user!.userId;
+    const { slug, otherUserId } = req.params;
+    const peerId = Number(otherUserId);
+    const { content } = req.body as { content: string };
+
+    const course = await get<{ id: number }>('SELECT id FROM Courses WHERE slug = ?', [slug]);
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found.' });
+    }
+    if (!peerId || peerId === userId) {
+      return res.status(400).json({ message: 'Invalid collaborator.' });
+    }
+
+    const accepted = await get<{ id: number }>(
+      `SELECT id
+       FROM CourseCollabRequests
+       WHERE course_id = ?
+         AND status = 'accepted'
+         AND (
+           (from_user_id = ? AND to_user_id = ?)
+           OR
+           (from_user_id = ? AND to_user_id = ?)
+         )`,
+      [course.id, userId, peerId, peerId, userId]
+    );
+    if (!accepted) {
+      return res.status(403).json({ message: 'Private chat is available after request acceptance.' });
+    }
+
+    await run(
+      `INSERT INTO CourseCollabMessages (course_id, from_user_id, to_user_id, content)
+       VALUES (?, ?, ?, ?)`,
+      [course.id, userId, peerId, content.trim()]
+    );
+
+    const created = await get<{ id: number; created_at: string; name: string }>(
+      `SELECT m.id, m.created_at, u.name
+       FROM CourseCollabMessages m
+       JOIN Users u ON u.id = m.from_user_id
+       WHERE m.course_id = ? AND m.from_user_id = ? AND m.to_user_id = ?
+       ORDER BY m.id DESC
+       LIMIT 1`,
+      [course.id, userId, peerId]
+    );
+    if (!created) {
+      return res.status(500).json({ message: 'Failed to send private message.' });
+    }
+
+    return res.status(201).json({
+      message: {
+        id: created.id,
+        userId,
+        userName: created.name,
+        content: content.trim(),
+        createdAt: created.created_at,
+        isMe: true
+      }
+    });
+  }
+);
 
 courseRouter.post(
   '/:slug/chat',

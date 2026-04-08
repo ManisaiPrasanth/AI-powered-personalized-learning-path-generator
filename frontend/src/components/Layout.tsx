@@ -39,16 +39,38 @@ export const Layout: React.FC = () => {
               Courses
             </NavLink>
             {user && user.role !== 'admin' && (
-              <NavLink
-                to="/inbox"
-                className={({ isActive }) =>
-                  isActive
-                    ? 'text-primary font-medium'
-                    : 'text-slate-700 hover:text-primary transition-colors dark:text-slate-200'
-                }
-              >
-                Inbox
-              </NavLink>
+              <>
+                <NavLink
+                  to="/inbox"
+                  className={({ isActive }) =>
+                    isActive
+                      ? 'text-primary font-medium'
+                      : 'text-slate-700 hover:text-primary transition-colors dark:text-slate-200'
+                  }
+                >
+                  Inbox
+                </NavLink>
+                <NavLink
+                  to="/peer-discussion"
+                  className={({ isActive }) =>
+                    isActive
+                      ? 'text-primary font-medium'
+                      : 'text-slate-700 hover:text-primary transition-colors dark:text-slate-200'
+                  }
+                >
+                  Peer Learning
+                </NavLink>
+                <NavLink
+                  to="/private-messages"
+                  className={({ isActive }) =>
+                    isActive
+                      ? 'text-primary font-medium'
+                      : 'text-slate-700 hover:text-primary transition-colors dark:text-slate-200'
+                  }
+                >
+                  Private Messages
+                </NavLink>
+              </>
             )}
             <LanguageSelect />
             <ThemeSelect />

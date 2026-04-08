@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
 
 import { initDb } from './db/connection';
 import { ensureAdminUser } from './db/ensureAdmin';
@@ -10,6 +11,7 @@ import { quizRouter } from './routes/quizzes';
 import { adminRouter } from './routes/admin';
 import { activityRouter } from './routes/activity';
 import { studentInboxRouter } from './routes/studentInbox';
+import { privateMessagesRouter } from './routes/privateMessages';
 import { translateRouter } from './routes/translate';
 import { aiContentRouter } from './routes/aiContent';
 import { requireAuth, requireAdmin } from './middleware/auth';
@@ -20,7 +22,8 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '12mb' }));
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
@@ -32,6 +35,7 @@ app.use('/api/quizzes', requireAuth, quizRouter);
 app.use('/api/admin', requireAuth, requireAdmin, adminRouter);
 app.use('/api/activity', requireAuth, activityRouter);
 app.use('/api/inbox', requireAuth, studentInboxRouter);
+app.use('/api/private-messages', requireAuth, privateMessagesRouter);
 app.use('/api/translate', requireAuth, translateRouter);
 app.use('/api/ai-content', requireAuth, aiContentRouter);
 

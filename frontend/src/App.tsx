@@ -14,6 +14,8 @@ import { AdminRoute } from './components/AdminRoute';
 import { CertificatePage } from './pages/CertificatePage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { StudentInboxPage } from './pages/StudentInboxPage';
+import { PeerDiscussionPage } from './pages/PeerDiscussionPage';
+import { PrivateMessagesPage } from './pages/PrivateMessagesPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 export function App() {
@@ -48,6 +50,8 @@ export function App() {
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="certificate" element={<CertificatePage />} />
         <Route path="inbox" element={<StudentInboxPage />} />
+        <Route path="private-messages" element={<PrivateMessagesPage />} />
+        <Route path="peer-discussion" element={<PeerDiscussionPage />} />
         <Route path="courses" element={<CoursesPage />} />
         <Route path="courses/:slug" element={<CourseDetailPage />} />
         <Route path="courses/:slug/units/:unitNumber" element={<UnitPage />} />

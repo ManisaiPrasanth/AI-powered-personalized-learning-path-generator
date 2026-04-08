@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useApi } from '../api/client';
 import { ProgressBar } from '../components/ProgressBar';
-import { CourseChatPanel } from '../components/CourseChatPanel';
 import { useLanguage } from '../state/LanguageContext';
 import { translateBatch } from '../api/translate';
 
@@ -257,7 +256,6 @@ export const CourseDetailPage: React.FC = () => {
             ))}
           </div>
 
-          <CourseChatPanel courseSlug={viewData.course.slug} courseTitle={viewData.course.title} />
         </section>
       </div>
     </div>

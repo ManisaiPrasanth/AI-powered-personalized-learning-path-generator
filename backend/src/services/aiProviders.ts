@@ -59,8 +59,8 @@ export async function getGeminiSummary(prompt: string): Promise<ProviderResult> 
     return { provider: 'Gemini', text: '', error: 'GEMINI_API_KEY not set' };
   }
   try {
-    // Use widely available Gemini model + v1 API
-    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${key}`;
+    // Use currently supported Gemini Flash model.
+    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${key}`;
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

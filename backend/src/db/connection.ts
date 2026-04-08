@@ -160,6 +160,81 @@ export async function initDb(): Promise<void> {
       FOREIGN KEY (admin_user_id) REFERENCES Users(id)
     );
   `);
+
+  // Student-to-student collaboration requests within a course
+  await run(`
+    CREATE TABLE IF NOT EXISTS CourseCollabRequests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      course_id INTEGER NOT NULL,
+      from_user_id INTEGER NOT NULL,
+      to_user_id INTEGER NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      responded_at DATETIME,
+      UNIQUE (course_id, from_user_id, to_user_id),
+      FOREIGN KEY (course_id) REFERENCES Courses(id),
+      FOREIGN KEY (from_user_id) REFERENCES Users(id),
+      FOREIGN KEY (to_user_id) REFERENCES Users(id)
+    );
+  `);
+
+  // Private direct messages between accepted collaborators
+  await run(`
+    CREATE TABLE IF NOT EXISTS CourseCollabMessages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      course_id INTEGER NOT NULL,
+      from_user_id INTEGER NOT NULL,
+      to_user_id INTEGER NOT NULL,
+      content TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (course_id) REFERENCES Courses(id),
+      FOREIGN KEY (from_user_id) REFERENCES Users(id),
+      FOREIGN KEY (to_user_id) REFERENCES Users(id)
+    );
+  `);
+
+  await run(`
+    CREATE TABLE IF NOT EXISTS PrivateChatRequests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      from_user_id INTEGER NOT NULL,
+      to_user_id INTEGER NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      responded_at DATETIME,
+      UNIQUE (from_user_id, to_user_id),
+      FOREIGN KEY (from_user_id) REFERENCES Users(id),
+      FOREIGN KEY (to_user_id) REFERENCES Users(id)
+    );
+  `);
+
+  await run(`
+    CREATE TABLE IF NOT EXISTS PrivateMessages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      from_user_id INTEGER NOT NULL,
+      to_user_id INTEGER NOT NULL,
+      content TEXT NOT NULL,
+      attachment_name TEXT,
+      attachment_path TEXT,
+      attachment_mime TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (from_user_id) REFERENCES Users(id),
+      FOREIGN KEY (to_user_id) REFERENCES Users(id)
+    );
+  `);
+
+  const privateMessageColumns = await all<{ name: string }>('PRAGMA table_info(PrivateMessages)');
+  const hasAttachmentName = privateMessageColumns.some((c) => c.name === 'attachment_name');
+  const hasAttachmentPath = privateMessageColumns.some((c) => c.name === 'attachment_path');
+  const hasAttachmentMime = privateMessageColumns.some((c) => c.name === 'attachment_mime');
+  if (!hasAttachmentName) {
+    await run('ALTER TABLE PrivateMessages ADD COLUMN attachment_name TEXT');
+  }
+  if (!hasAttachmentPath) {
+    await run('ALTER TABLE PrivateMessages ADD COLUMN attachment_path TEXT');
+  }
+  if (!hasAttachmentMime) {
+    await run('ALTER TABLE PrivateMessages ADD COLUMN attachment_mime TEXT');
+  }
 }
 
 export function run(sql: string, params: unknown[] = []): Promise<void> {

@@ -193,13 +193,14 @@ aiContentRouter.post(
 
     const discoveredPaths = await discoverModelPaths(key);
     const fallbackPaths = [
+      'v1beta/models/gemini-2.5-flash:generateContent',
+      'v1/models/gemini-2.5-flash:generateContent',
+      'v1beta/models/gemini-2.0-flash:generateContent',
+      'v1/models/gemini-2.0-flash:generateContent',
       'v1beta/models/gemini-1.5-flash-latest:generateContent',
       'v1beta/models/gemini-1.5-flash:generateContent',
       'v1beta/models/gemini-1.5-flash-8b:generateContent',
-      'v1beta/models/gemini-2.0-flash:generateContent',
-      'v1beta/models/gemini-pro:generateContent',
-      'v1/models/gemini-1.5-flash:generateContent',
-      'v1/models/gemini-pro:generateContent'
+      'v1/models/gemini-1.5-flash:generateContent'
     ];
     const modelPaths = Array.from(new Set([...discoveredPaths, ...fallbackPaths]));
 
@@ -348,13 +349,14 @@ aiContentRouter.post(
 
     const discoveredPaths = await discoverModelPaths(key);
     const fallbackPaths = [
+      'v1beta/models/gemini-2.5-flash:generateContent',
+      'v1/models/gemini-2.5-flash:generateContent',
+      'v1beta/models/gemini-2.0-flash:generateContent',
+      'v1/models/gemini-2.0-flash:generateContent',
       'v1beta/models/gemini-1.5-flash-latest:generateContent',
       'v1beta/models/gemini-1.5-flash:generateContent',
       'v1beta/models/gemini-1.5-flash-8b:generateContent',
-      'v1beta/models/gemini-2.0-flash:generateContent',
-      'v1beta/models/gemini-pro:generateContent',
-      'v1/models/gemini-1.5-flash:generateContent',
-      'v1/models/gemini-pro:generateContent'
+      'v1/models/gemini-1.5-flash:generateContent'
     ];
     const modelPaths = Array.from(new Set([...discoveredPaths, ...fallbackPaths]));
 
