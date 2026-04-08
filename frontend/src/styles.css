@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: theme('fontFamily.sans');
+  -webkit-font-smoothing: antialiased;
+}
+
+html:not(.dark) body {
+  background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 55%, #cbd5e1 100%);
+  color: #0f172a;
+}
+
+html.dark body {
+  background: radial-gradient(circle at top, #020617 0, #020617 45%, #000000 100%);
+  color: #e5e7eb;
+}
+
+a {
+  text-decoration: none;
+}
+
+.card-elevated {
+  border-radius: 1.25rem;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: #ffffff;
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.08);
+}
+
+html.dark .card-elevated {
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background:
+    radial-gradient(circle at 0 0, rgba(108, 99, 255, 0.24), transparent 55%),
+    radial-gradient(circle at 100% 100%, rgba(0, 212, 255, 0.18), transparent 55%),
+    rgba(15, 23, 42, 0.9);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.7);
+}
+
+.pill-muted {
+  border-radius: 999px;
+  border: 1px solid rgba(100, 116, 139, 0.35);
+  padding: 0.35rem 0.85rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #475569;
+}
+
+html.dark .pill-muted {
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  color: #cbd5e1;
+}
+
+.fade-in-up {
+  animation: fade-in-up 0.45s ease-out both;
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.btn-primary {
+  @apply inline-flex items-center justify-center rounded-2xl bg-primary px-4 py-2 text-xs font-semibold text-slate-950 shadow-soft-xl transition-all duration-300 hover:bg-primary/90 hover:-translate-y-0.5 active:translate-y-0;
+}
+
+.btn-outline {
+  @apply inline-flex items-center justify-center rounded-2xl border px-4 py-2 text-xs font-semibold transition-all duration-300;
+  @apply border-slate-300 text-slate-800 hover:border-primary hover:text-primary;
+}
+
+html.dark .btn-outline {
+  @apply border-slate-600 text-slate-100 hover:border-secondary hover:text-secondary;
+}
+
+.badge-soft {
+  @apply inline-flex items-center rounded-full px-2 py-0.5 text-[0.65rem] font-medium uppercase tracking-wide;
+  @apply bg-slate-200/90 text-slate-700;
+}
+
+html.dark .badge-soft {
+  @apply bg-slate-800/70 text-slate-300;
+}
+
+.skeleton {
+  @apply animate-pulse rounded-xl bg-slate-200;
+}
+
+html.dark .skeleton {
+  @apply bg-slate-800/60;
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translate3d(0, -10%, 0) rotateZ(0deg);
+  }
+  100% {
+    transform: translate3d(0, 110vh, 0) rotateZ(360deg);
+  }
+}
